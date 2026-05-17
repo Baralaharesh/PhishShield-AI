@@ -12,7 +12,7 @@ st.markdown("---")
 
 # 2. యూజర్ నుండి Gemini API Key తీసుకోవడం (Security కోసం)
 st.sidebar.header("Settings")
-api_key = st.sidebar.text_input("Enter Gemini API Key", type="password")
+api_key = st.secrets["GEMINI_API_KEY"]
 st.sidebar.info("Get your key from: [Google AI Studio](https://aistudio.google.com/app/apikey)")
 
 # 3. మెయిన్ ఇంటర్‌ఫేస్
