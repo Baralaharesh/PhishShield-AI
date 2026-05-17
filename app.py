@@ -4,13 +4,13 @@ import requests
 import google.generativeai as genai
 from urllib.parse import urlparse
 
-# 1. వెబ్‌సైట్ సెట్టింగ్స్ (పేజీ టైటిల్ మరియు ఐకాన్)
+# 1. వెబ్‌సైట్ సెట్టింగ్స్
 st.set_page_config(page_title="PhishShield AI", page_icon="🛡️")
 
 st.title("🛡️ PhishShield: AI Phishing Analyzer")
 st.markdown("---")
 
-# 2. యూజర్ నుండి Gemini API Key తీసుకోవడం (Security కోసం)
+# 2. యూజర్ నుండి Gemini API Key తీసుకోవడం
 st.sidebar.header("Settings")
 api_key = st.sidebar.text_input("Enter Gemini API Key", type="password")
 st.sidebar.info("Get your key from: [Google AI Studio](https://aistudio.google.com/app/apikey)")
@@ -53,6 +53,7 @@ if st.button("లింక్‌ని పరిశీలించు (Analyze)"
             
             with st.spinner('AI విశ్లేషిస్తోంది...'):
                 genai.configure(api_key=api_key)
+                # ఇక్కడ మనం లేటెస్ట్ మోడల్ ని వాడుతున్నాం
                 model = genai.GenerativeModel('gemini-1.5-flash')
                 
                 prompt = f"""
@@ -66,7 +67,7 @@ if st.button("లింక్‌ని పరిశీలించు (Analyze)"
                 1. Is it Safe, Suspicious, or Dangerous?
                 2. Reason for your verdict.
                 3. Advice for the user.
-                Keep it concise.
+                Keep it concise and clear.
                 """
                 
                 response = model.generate_content(prompt)
@@ -76,4 +77,4 @@ if st.button("లింక్‌ని పరిశీలించు (Analyze)"
             st.error(f"క్షమించండి! వివరాలు సేకరించలేకపోయాను. URL సరిగ్గా ఉందో లేదో చూడండి. \n(Error: {e})")
 
 st.markdown("---")
-st.caption("Developed for Cyber Security Awareness | Powered by Gemini AI")
+st.caption("Developed by Barla Hareesh | Powered by Gemini AI")
