@@ -53,7 +53,7 @@ if st.button("లింక్‌ని పరిశీలించు (Analyze)"
             
             with st.spinner('AI విశ్లేషిస్తోంది...'):
                 genai.configure(api_key=api_key)
-                model = genai.GenerativeModel('gemini-pro')
+                model = genai.GenerativeModel('gemini-1.5-flash')
                 
                 prompt = f"""
                 Act as a Cyber Security Expert. Analyze this URL and its server details:
