@@ -4,76 +4,88 @@ import requests
 import google.generativeai as genai
 from urllib.parse import urlparse
 
-# 1. వెబ్‌సైట్ సెట్టింగ్స్ (పేజీ టైటిల్ మరియు ఐకాన్)
+# 1. పేజీ సెట్టింగ్స్ మరియు అందమైన డిజైన్
 st.set_page_config(page_title="PhishShield AI", page_icon="🛡️")
+
+# నీ పాత యాప్ లో ఉన్న CSS స్టైలింగ్
+st.markdown("""
+    <style>
+    .main {
+        background-color: #f0f2f6;
+    }
+    .stButton>button {
+        width: 100%;
+        border-radius: 5px;
+        height: 3em;
+        background-color: #ff4b4b;
+        color: white;
+        font-weight: bold;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 st.title("🛡️ PhishShield: AI Phishing Analyzer")
 st.markdown("---")
 
-# 2. యూజర్ నుండి Gemini API Key తీసుకోవడం (Security కోసం)
-st.sidebar.header("Settings")
+# 2. సైడ్‌బార్ కాన్ఫిగరేషన్
+st.sidebar.header("Configuration")
 api_key = st.sidebar.text_input("Enter Gemini API Key", type="password")
-st.sidebar.info("Get your key from: [Google AI Studio](https://aistudio.google.com/app/apikey)")
+st.sidebar.markdown("[Get API Key Here](https://aistudio.google.com/app/apikey)")
+st.sidebar.markdown("---")
+st.sidebar.write("Developed by: Barla Hareesh")
 
-# 3. మెయిన్ ఇంటర్‌ఫేస్
-st.write("### ఏదైనా లింక్‌ని ఇక్కడ స్కాన్ చేయండి 👇")
-user_url = st.text_input("URLని పేస్ట్ చేయండి:", placeholder="https://example.com")
+# 3. యూజర్ ఇన్‌పుట్
+user_url = st.text_input("URLని ఇక్కడ పేస్ట్ చేయండి:", placeholder="https://example.com")
 
-if st.button("లింక్‌ని పరిశీలించు (Analyze)"):
+if st.button("Analyze"):
     if not api_key:
-        st.error("ముందుగా సైడ్‌బార్‌లో మీ Gemini API Keyని ఎంటర్ చేయండి!")
+        st.error("దయచేసి API Keyని ఎంటర్ చేయండి!")
     elif not user_url:
-        st.warning("లింక్ ఏదీ ఎంటర్ చేయలేదు!")
+        st.warning("URL ఎంటర్ చేయండి!")
     else:
         try:
             with st.spinner('సర్వర్ వివరాలను సేకరిస్తున్నాను...'):
-                # URL నుండి డొమైన్ పేరును తీయడం
-                parsed_url = urlparse(user_url)
-                domain = parsed_url.netloc if parsed_url.netloc else parsed_url.path
+                # URL క్లీనింగ్
+                clean_url = user_url if '://' in user_url else 'http://' + user_url
+                parsed_url = urlparse(clean_url)
+                domain = parsed_url.netloc
                 
-                # IP Address కనుక్కోవడం
+                # IP Address మరియు సర్వర్ వివరాలు
                 ip_addr = socket.gethostbyname(domain)
-                
-                # IP ద్వారా లొకేషన్ వివరాలు
                 geo = requests.get(f"https://ipapi.co/{ip_addr}/json/").json()
                 
-                # రిజల్ట్స్ డిస్‌ప్లే
                 st.success("✅ సర్వర్ వివరాలు లభించాయి!")
+                
+                # పాత కోడ్ లాగా బాక్సుల్లో చూపించడం
                 col1, col2 = st.columns(2)
                 with col1:
-                    st.info(f"**IP Address:** \n{ip_addr}")
-                    st.info(f"**City:** \n{geo.get('city', 'N/A')}")
+                    st.info(f"**IP Address:** {ip_addr}")
+                    st.info(f"**City:** {geo.get('city', 'Unknown')}")
                 with col2:
-                    st.info(f"**Country:** \n{geo.get('country_name', 'N/A')}")
-                    st.info(f"**ISP:** \n{geo.get('org', 'N/A')}")
+                    st.info(f"**Country:** {geo.get('country_name', 'Unknown')}")
+                    st.info(f"**ISP:** {geo.get('org', 'Unknown')}")
 
-            # AI విశ్లేషణ (Threat Analysis)
+            # 4. AI భద్రతా నివేదిక
             st.markdown("---")
-            st.subheader("🤖 AI భద్రతా నివేదిక (Security Report)")
+            st.subheader("🤖 AI భద్రతా నివేదిక")
             
             with st.spinner('AI విశ్లేషిస్తోంది...'):
                 genai.configure(api_key=api_key)
-                model = genai.GenerativeModel('gemini-pro')
+                
+                # ఎర్రర్ రాకుండా ఉండటానికి మోడల్ సెలెక్షన్
+                model = genai.GenerativeModel('gemini-1.5-flash')
                 
                 prompt = f"""
-                Act as a Cyber Security Expert. Analyze this URL and its server details:
-                URL: {user_url}
-                IP: {ip_addr}
-                Location: {geo.get('city')}, {geo.get('country_name')}
-                ISP: {geo.get('org')}
-                
-                Tell me:
-                1. Is it Safe, Suspicious, or Dangerous?
-                2. Reason for your verdict.
-                3. Advice for the user.
-                Keep it concise.
+                Act as a Cyber Security Expert. Analyze this URL for phishing risks: {user_url}. 
+                Details: IP {ip_addr}, Location {geo.get('city')}, {geo.get('country_name')}. 
+                Provide a verdict and advice in Telugu.
                 """
                 
                 response = model.generate_content(prompt)
                 st.write(response.text)
 
         except Exception as e:
-            st.error(f"క్షమించండి! వివరాలు సేకరించలేకపోయాను. URL సరిగ్గా ఉందో లేదో చూడండి. \n(Error: {e})")
+            st.error(f"Error: {e}")
 
 st.markdown("---")
-st.caption("Developed for Cyber Security Awareness | Powered by Gemini AI")
+st.caption("Developed by Barla Hareesh")
