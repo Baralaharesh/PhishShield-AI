@@ -4,106 +4,76 @@ import requests
 import google.generativeai as genai
 from urllib.parse import urlparse
 
-# 1. పేజీ సెట్టింగ్స్ (అందమైన డిజైన్ కోసం)
-st.set_page_config(page_title="PhishShield AI", page_icon="🛡️", layout="centered")
-
-# Custom CSS for styling (నీ పాత యాప్ లాగే కనిపిస్తుంది)
-st.markdown("""
-    <style>
-    .main {
-        background-color: #f5f7f9;
-    }
-    .stButton>button {
-        width: 100%;
-        border-radius: 5px;
-        height: 3em;
-        background-color: #ff4b4b;
-        color: white;
-        font-weight: bold;
-    }
-    .stTextInput>div>div>input {
-        border-radius: 5px;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+# 1. వెబ్‌సైట్ సెట్టింగ్స్ (పేజీ టైటిల్ మరియు ఐకాన్)
+st.set_page_config(page_title="PhishShield AI", page_icon="🛡️")
 
 st.title("🛡️ PhishShield: AI Phishing Analyzer")
-st.write("Cyber Security Expert AI ద్వారా ఏదైనా లింక్‌ని తనిఖీ చేయండి.")
 st.markdown("---")
 
-# 2. సైడ్‌బార్ సెట్టింగ్స్
-st.sidebar.header("⚙️ Configuration")
-api_key = st.sidebar.text_input("Enter Gemini API Key", type="password", help="Get your key from Google AI Studio")
-st.sidebar.markdown("[Get API Key Here](https://aistudio.google.com/app/apikey)")
-st.sidebar.markdown("---")
-st.sidebar.caption("Developed by: Barla Hareesh")
+# 2. యూజర్ నుండి Gemini API Key తీసుకోవడం (Security కోసం)
+st.sidebar.header("Settings")
+api_key = st.sidebar.text_input("Enter Gemini API Key", type="password")
+st.sidebar.info("Get your key from: [Google AI Studio](https://aistudio.google.com/app/apikey)")
 
-# 3. యూజర్ ఇన్‌పుట్
-user_url = st.text_input("🔗 URLని ఇక్కడ పేస్ట్ చేయండి (e.g., google.com):", placeholder="https://example.com")
+# 3. మెయిన్ ఇంటర్‌ఫేస్
+st.write("### ఏదైనా లింక్‌ని ఇక్కడ స్కాన్ చేయండి 👇")
+user_url = st.text_input("URLని పేస్ట్ చేయండి:", placeholder="https://example.com")
 
 if st.button("లింక్‌ని పరిశీలించు (Analyze)"):
     if not api_key:
-        st.error("❌ దయచేసి సైడ్‌బార్‌లో Gemini API Keyని ఎంటర్ చేయండి!")
+        st.error("ముందుగా సైడ్‌బార్‌లో మీ Gemini API Keyని ఎంటర్ చేయండి!")
     elif not user_url:
-        st.warning("⚠️ దయచేసి ఒక URLని ఎంటర్ చేయండి!")
+        st.warning("లింక్ ఏదీ ఎంటర్ చేయలేదు!")
     else:
         try:
-            with st.spinner('🔍 సర్వర్ వివరాలను సేకరిస్తున్నాను...'):
-                # URL క్లీనింగ్
-                clean_url = user_url if '://' in user_url else 'http://' + user_url
-                parsed_url = urlparse(clean_url)
-                domain = parsed_url.netloc
+            with st.spinner('సర్వర్ వివరాలను సేకరిస్తున్నాను...'):
+                # URL నుండి డొమైన్ పేరును తీయడం
+                parsed_url = urlparse(user_url)
+                domain = parsed_url.netloc if parsed_url.netloc else parsed_url.path
                 
-                # IP Details
+                # IP Address కనుక్కోవడం
                 ip_addr = socket.gethostbyname(domain)
+                
+                # IP ద్వారా లొకేషన్ వివరాలు
                 geo = requests.get(f"https://ipapi.co/{ip_addr}/json/").json()
                 
+                # రిజల్ట్స్ డిస్‌ప్లే
                 st.success("✅ సర్వర్ వివరాలు లభించాయి!")
-                
-                # సర్వర్ వివరాలను కాలమ్స్‌లో చూపించడం
-                c1, c2 = st.columns(2)
-                with c1:
-                    st.metric("IP Address", ip_addr)
-                    st.write(f"**City:** {geo.get('city', 'Unknown')}")
-                with c2:
-                    st.metric("Country", geo.get('country_name', 'Unknown'))
-                    st.write(f"**ISP:** {geo.get('org', 'Unknown')}")
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.info(f"**IP Address:** \n{ip_addr}")
+                    st.info(f"**City:** \n{geo.get('city', 'N/A')}")
+                with col2:
+                    st.info(f"**Country:** \n{geo.get('country_name', 'N/A')}")
+                    st.info(f"**ISP:** \n{geo.get('org', 'N/A')}")
 
-            # 4. AI విశ్లేషణ (పక్కాగా పనిచేసే Gemini 1.5 Flash)
+            # AI విశ్లేషణ (Threat Analysis)
             st.markdown("---")
-            st.subheader("🤖 AI భద్రతా నివేదిక")
+            st.subheader("🤖 AI భద్రతా నివేదిక (Security Report)")
             
             with st.spinner('AI విశ్లేషిస్తోంది...'):
                 genai.configure(api_key=api_key)
-                
-                # లేటెస్ట్ స్టేబుల్ మోడల్
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                model = genai.GenerativeModel('gemini-pro')
                 
                 prompt = f"""
-                Act as a Cyber Security Expert. Analyze this website for phishing risks:
+                Act as a Cyber Security Expert. Analyze this URL and its server details:
                 URL: {user_url}
                 IP: {ip_addr}
                 Location: {geo.get('city')}, {geo.get('country_name')}
                 ISP: {geo.get('org')}
                 
-                Provide a report in Telugu language:
-                1. Verdict (Safe/Suspicious/Dangerous)
-                2. Reasons for the verdict.
-                3. Safety tips for the user.
+                Tell me:
+                1. Is it Safe, Suspicious, or Dangerous?
+                2. Reason for your verdict.
+                3. Advice for the user.
+                Keep it concise.
                 """
                 
                 response = model.generate_content(prompt)
-                st.info(response.text)
+                st.write(response.text)
 
         except Exception as e:
-            # Fallback to Gemini Pro if Flash fails
-            try:
-                model = genai.GenerativeModel('gemini-pro')
-                response = model.generate_content(f"Analyze {user_url} for phishing. Telugu report.")
-                st.info(response.text)
-            except:
-                st.error(f"Error: {e}")
-                st.info("చిట్కా: URL సరిగ్గా ఉందో లేదో చూడండి.")
+            st.error(f"క్షమించండి! వివరాలు సేకరించలేకపోయాను. URL సరిగ్గా ఉందో లేదో చూడండి. \n(Error: {e})")
 
 st.markdown("---")
-st.caption("© 2026 PhishShield AI | Awareness Project by Barla Hareesh")
+st.caption("Developed for Cyber Security Awareness | Powered by Gemini AI")
